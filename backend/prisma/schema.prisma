@@ -1,0 +1,240 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TripStatus {
+  PLANNING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum FoodPreference {
+  NO_PREFERENCE
+  VEGETARIAN
+  VEGAN
+  PESCATARIAN
+  NON_VEGETARIAN
+  HALAL
+  KOSHER
+  BOTH
+}
+
+enum TripBudgetType {
+  TOTAL
+  PER_PERSON
+}
+
+enum TravelMood {
+  RELAXATION
+  ADVENTURE
+  NATURE
+  PHOTOGRAPHY
+  HISTORY
+  FOOD
+  ROMANTIC
+  FAMILY
+  BEACH_EXPLORATION
+  SHOPPING
+  SPIRITUAL
+}
+
+enum ItemType {
+  ATTRACTION
+  RESTAURANT
+  TRANSPORT
+  ACCOMMODATION
+  ACTIVITY
+  FREE_TIME
+}
+
+enum ExpenseCategory {
+  TRANSPORT
+  FOOD
+  ATTRACTION
+  ACCOMMODATION
+  SHOPPING
+  OTHER
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  password     String
+  bio          String?
+  homeLocation String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  trips Trip[]
+}
+
+model Destination {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  country     String
+  region      String?
+  description String?
+  lat         Float
+  lng         Float
+  imageUrl    String?
+  tags        String[] @default([])
+  isFeatured  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  trips        Trip[]
+  attractions  Attraction[]
+  restaurants  Restaurant[]
+}
+
+model Trip {
+  id                 String         @id @default(cuid())
+  title              String
+  destinationName    String
+  startLocation      String
+  travelDate         DateTime       @db.Date
+  endDate            DateTime?      @db.Date
+  travellers         Int            @default(1)
+  budget             Decimal        @db.Decimal(12, 2)
+  availableTimeHours Int            @default(8)
+  foodPreference     FoodPreference @default(NO_PREFERENCE)
+  interests          String[]       @default([])
+  mood               TravelMood?
+  moodPreferences    TravelMood[]    @default([])
+  transportationPreferences String[] @default([])
+  budgetType         TripBudgetType  @default(TOTAL)
+  currency           String          @default("USD")
+  cuisinePreferences String[]        @default([])
+  foodBudgetMin      Decimal?        @db.Decimal(10, 2)
+  foodBudgetMax      Decimal?        @db.Decimal(10, 2)
+  status             TripStatus     @default(PLANNING)
+  notes              String?
+  lat                Float?
+  lng                Float?
+  startLat           Float?
+  startLng           Float?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  destination Destination? @relation(fields: [destinationId], references: [id], onDelete: SetNull)
+  destinationId String?
+
+  itineraries Itinerary[]
+  expenses    Expense[]
+
+  @@index([userId, travelDate])
+}
+
+model Attraction {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  category     String?
+  address      String?
+  lat          Float
+  lng          Float
+  entryFee     Decimal? @db.Decimal(10, 2)
+  openingHours String?
+  website      String?
+  phone        String?
+  imageUrl     String?
+  rating       Float?
+  source       String   @default("manual")
+  osmId        String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  destination   Destination? @relation(fields: [destinationId], references: [id], onDelete: SetNull)
+  destinationId String?
+  itineraryItems ItineraryItem[]
+}
+
+model Restaurant {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  cuisine     String?
+  category    String?
+  address     String?
+  lat         Float
+  lng         Float
+  priceLevel  Int?
+  openingHours String?
+  website     String?
+  phone       String?
+  imageUrl    String?
+  rating      Float?
+  source      String   @default("manual")
+  osmId       String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  destination   Destination? @relation(fields: [destinationId], references: [id], onDelete: SetNull)
+  destinationId String?
+  itineraryItems ItineraryItem[]
+}
+
+model Itinerary {
+  id        String   @id @default(cuid())
+  dayNumber Int
+  date      DateTime? @db.Date
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trip   Trip            @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId String
+  items  ItineraryItem[]
+
+  @@unique([tripId, dayNumber])
+  @@index([tripId, dayNumber])
+}
+
+model ItineraryItem {
+  id              String   @id @default(cuid())
+  type            ItemType @default(ATTRACTION)
+  title           String
+  description     String?
+  note            String?
+  lat             Float?
+  lng             Float?
+  durationMinutes Int      @default(60)
+  estimatedCost   Decimal  @default(0) @db.Decimal(10, 2)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  itinerary   Itinerary   @relation(fields: [itineraryId], references: [id], onDelete: Cascade)
+  itineraryId String
+  attraction  Attraction? @relation(fields: [attractionId], references: [id], onDelete: SetNull)
+  attractionId String?
+  restaurant  Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+  restaurantId String?
+
+  @@index([itineraryId, sortOrder])
+}
+
+model Expense {
+  id          String         @id @default(cuid())
+  category    ExpenseCategory
+  amount      Decimal        @db.Decimal(10, 2)
+  description String
+  spentAt     DateTime       @db.Date
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId String
+
+  @@index([tripId, spentAt])
+}
