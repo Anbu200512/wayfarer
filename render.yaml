@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: wayfarer-api
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install && npx prisma generate
+    startCommand: npx prisma migrate deploy && node src/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_URL
+        value: https://wayfarer-red.vercel.app
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: OVERPASS_URL
+        value: https://overpass-api.de/api/interpreter
+      - key: NOMINATIM_URL
+        value: https://nominatim.openstreetmap.org
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      - key: GROQ_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: GEOAPIFY_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: RAILWAY_ENGINE_API_KEY
+        sync: false
